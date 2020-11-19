@@ -1,0 +1,12 @@
+[submodule "subprojects/cppzmq/cppzmq"]
+	path = subprojects/cppzmq/cppzmq
+	url = https://github.com/zeromq/cppzmq.git
+[submodule "subprojects/googletest/googletest"]
+	path = subprojects/googletest/googletest
+	url = https://github.com/google/googletest.git
+[submodule "subprojects/libzmq/libzmq"]
+	path = subprojects/libzmq/libzmq
+	url = https://github.com/zeromq/libzmq.git
+[submodule "subprojects/spdlog/spdlog"]
+	path = subprojects/spdlog/spdlog
+	url = https://github.com/gabime/spdlog.git
