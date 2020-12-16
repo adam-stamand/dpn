@@ -22,7 +22,7 @@ public:
     using InterfaceID = Label::InterfaceID;
     using PortID = Label::PortID;
     using MessageID = Label::MessageID;
-    using ConnectionDescriptionStruct = Label::LabelStruct;
+    using ConnectionDescriptionStruct = Label::InterfacePair;
     using Endpoint = Label::LabelEndpoint;
     using Package = std::vector<Message*>;
 
@@ -32,21 +32,8 @@ public:
     friend TopicInterface;
 
 
-    const static uint16_t PEER_PORT_ID_DEFAULT;
 
-    enum class InterfaceType :uint16_t
-    {
-        PushPull,
-        Request,
-        PubSub
-    };
 
-    struct InterfaceHeader
-    {
-        MessageID messageID_;
-        InterfaceType type_;
-        ConnectionDescriptionStruct connDesc_;
-    };
 
 
     /**
@@ -71,14 +58,6 @@ public:
         Package & recvMessage,
         Hub::HubTimeout timeout = Hub::HubTimeout(0));
 
-    // /**
-    //  * @overload Request()
-    //  */
-    // void Request(
-    //     ConnectionDescription & connDesc,
-    //     std::vector<Message*>& sendMessages, 
-    //     Message* recvMessage,
-    //     Hub::HubTimeout timeout = Hub::HubTimeout(0));
 
     /**
      * @brief Pub/Sub - Publish
@@ -109,12 +88,7 @@ public:
      * @param message Message to be pushed
      */
     void Push(Label & label, Package & package);
-    
-    // /**
-    //  * @overload Push()
-    //  */
-    // void Push(ConnectionDescription & connDesc, std::vector<Message*>& messages);
-
+ 
 
     /**
      * @brief Interface - Handle pending messages for interfaces
@@ -135,7 +109,7 @@ public:
      * @brief Get Pending Message
      * 
      * @details Checks for any pending/queued messages waiting to be read. If a message is found, the conents will
-     * be copied into the contents of the user supplied message. The function then returns, allowing the user to 
+     * be copied into the user supplied message. The function then returns, allowing the user to 
      * handle the data directly.
      * 
      * This call will block until either a message is read, or until the timeout expires, whichever comes first. 
@@ -146,7 +120,7 @@ public:
      */
     void GetPendingPackage(
         Label & label, 
-        Package package, 
+        Package & package, 
         const Hub::HubTimeout & timeout);
 
 

@@ -8,11 +8,12 @@ class PublishLabel : public Label
 {
 public:
 
-    PublishLabel(InterfaceID topic):Label(){}
-    PublishLabel(InterfaceID topic, PortID portID):Label()
-    {
-        SetPortID(portID, Endpoint::Self);
-    }
 
+    void Write(InterfaceID localInterfaceID, PortID localPortID = PEER_PORT_ID_DEFAULT)
+    {
+        reset();
+        GetSrc().interfaceID_ = localInterfaceID;
+        GetSrc().portID_ = localPortID;
+    }
 
 }

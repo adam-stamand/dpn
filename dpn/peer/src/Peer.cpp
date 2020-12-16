@@ -5,17 +5,16 @@ namespace dpn
 {
 
 const uint16_t Label::PEER_PORT_ID_DEFAULT = PEER_PORT_ID_DEFAULT_VALUE;
-const uint16_t Peer::PEER_PORT_ID_DEFAULT = PEER_PORT_ID_DEFAULT_VALUE;
 
 Peer::Peer(PeerID peerID): 
 hub_(std::to_string(peerID)),
-heartbeatEnabled_(true),logger_(std::to_string(peerID)),peerID_(peerID),headerMessage_(sizeof(InterfaceHeader)),messageID_(0)
+heartbeatEnabled_(true),logger_(std::to_string(peerID)),peerID_(peerID),headerMessage_(sizeof(Label::Contents)),messageID_(0)
 {
     DPN_LOGGER_DEBUG(
         GetLogger(), 
         "Peer::{} created", 
         GetPeerID());
-    headerMessage_.resize(sizeof(InterfaceHeader));
+    headerMessage_.resize(sizeof(Label::Contents));
 }
 
 
@@ -109,7 +108,7 @@ void Peer::RequestImpl(
             return; //TODO
         }
 
-        auto header = static_cast<InterfaceHeader*>(headerMessage_.buffer());
+        auto header = static_cast<Label::Contents*>(headerMessage_.buffer());
         if (header->messageID_  == messageID_)
         {
             // Found correct message
@@ -183,7 +182,7 @@ void Peer::Poll(
 void Peer::SendMessages(Label & label, Package package)
 {
     Hub::PortSpecification spec;
-    auto header = static_cast<InterfaceHeader*>(headerMessage_.buffer());
+    auto header = static_cast<Label::Contents*>(headerMessage_.buffer());
     label.SetPeerID(GetPeerID(), Endpoint::Self);
     header->connDesc_ = label.GetDescription();
     
@@ -204,22 +203,22 @@ void Peer::ReceiveMessages(Label & label, Package package)
     package.insert(package.begin(), &headerMessage_);
     hub_.Receive(label.GetPortID(Endpoint::Dest), spec, package);
     
-    auto header = static_cast<InterfaceHeader*>(headerMessage_.buffer());
-    label.SetDescription(header->connDesc_);
+    auto header = static_cast<Label::Contents*>(headerMessage_.buffer());
+    label.GetContents() = *header;
 
-    if (header->connDesc_.self_.portID_ != spec.portID_)
+    if (header->src_.portID_ != spec.portID_)
     {
         DPN_LOGGER_WARN(
             GetLogger(), 
             "Peer::{}/Port::{} received bad port ID in header {}", 
-            GetPeerID(), connDesc.GetPortID(Endpoint::Dest), header->connDesc_.self_.portID_);
+            GetPeerID(), connDesc.GetPortID(Endpoint::Dest), header->src_.portID_);
     }
-    else if (header->connDesc_.self_.peerID_ != HubNametoPeerID(spec.hubName_))
+    else if (header->src_.peerID_ != HubNametoPeerID(spec.hubName_))
     {
         DPN_LOGGER_WARN(
             GetLogger(), 
             "Peer::{}/Port::{} received bad peer ID in header {}", 
-            GetPeerID(), connDesc.GetPortID(Endpoint::Dest), header->connDesc_.self_.peerID_);
+            GetPeerID(), connDesc.GetPortID(Endpoint::Dest), header->src_.peerID_);
     }
 }
 
@@ -236,7 +235,7 @@ void Peer::ServiceInterfaces(Label & label, Package package, const Hub::HubTimeo
     {
         return;
     }
-    auto header = static_cast<InterfaceHeader*>(headerMessage_.buffer());
+    auto header = static_cast<Label::Contents*>(headerMessage_.buffer());
 
     auto interfacePair = interface_map_.find(label.GetInterfaceID(Endpoint::Dest));
     if (interfacePair == interface_map_.end())

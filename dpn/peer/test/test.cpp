@@ -47,7 +47,7 @@ class TestSubscriptionInterface : public SubscriptionInterface
 {
 public: 
     TestSubscriptionInterface(Peer * peer, std::string expectedString):SubscriptionInterface(peer),expectedString_(expectedString){}
-    void HandleSubscription(Peer::InterfaceHeader & header, Message & message)
+    void HandleSubscription(Label::InterfaceHeader & header, Message & message)
     {
         ASSERT_STREQ((char*)message.buffer(), expectedString_.c_str());
         messageHandled = true;
@@ -63,7 +63,7 @@ class TestReplyInterface : public ReplyInterface
 public:
     TestReplyInterface(Peer* peer):ReplyInterface(peer){}
 
-    void HandleReply(Peer::InterfaceHeader & header, Message & message, Message *& pt_returnMessage)
+    void HandleReply(Label::InterfaceHeader & header, Message & message, Message *& pt_returnMessage)
     {
         ASSERT_STREQ((char*)message.buffer(), "REQUEST_INTERFACE");
         

@@ -11,33 +11,82 @@ namespace dpn
 {
 
 
-class Interface;
-
 class Label
 {
 
 public:
 
     using PeerID = uint16_t;
-    using InterfaceID = uint16_t;
     using PortID = Hub::PortID;
+    using InterfaceID = uint16_t;
     using MessageID = uint32_t;
 
     #define PEER_PORT_ID_DEFAULT_VALUE 0
 
-    struct EndpointDescriptionStruct
+    const static uint16_t PEER_PORT_ID_DEFAULT;
+
+    /**
+     * @brief Interface Type
+     * 
+     * @details The Interface Type enumerates the 
+     * different types of interfaces that exist.
+     * Interface type is passed with each message
+     * so that the message can be processed by the 
+     * correct interface when received.
+     * 
+     */
+    enum class InterfaceType :uint16_t
+    {
+        PushPull,
+        Request,
+        PubSub
+    };
+
+
+
+    /**
+     * @brief Interface Description
+     * 
+     * @details The Interface Description struct is used to 
+     * uniqely identify/describe an interface. Only one interface
+     * can exist per unique combination of peerID, portID, and 
+     * interfaceID.  
+     * 
+     */
+    struct InterfaceDescription
     {
         PeerID peerID_;
         PortID portID_;
         InterfaceID interfaceID_;
     };
 
-    struct LabelStruct
+    /**
+     * @brief Interface Pair
+     * 
+     * @details The Interface Pair is used to store information
+     * about two interface descriptions as a pair. This is useful
+     * data to include in messages that get passed around between
+     * peers, as it provides information about where the message
+     * came from and where it's going. 
+     * 
+     */
+
+
+    /**
+     * @brief Interface Header
+     * 
+     * @details 
+     * 
+     */
+    struct Contents
     {
-        EndpointDescriptionStruct self_;
-        EndpointDescriptionStruct dest_;
+        MessageID messageID_;
+        InterfaceType type_;        
+        InterfaceDescription src_;
+        InterfaceDescription dest_;
     };
-    
+
+
     enum class LabelEndpoint : uint32_t
     {
         Self,
@@ -49,23 +98,18 @@ public:
 
     Label()
     {
-        label_.self_.portID_ = PEER_PORT_ID_DEFAULT;
-        label_.self_.peerID_ = 0;
-        label_.self_.interfaceID_ = 0;
-        label_.dest_.portID_ = PEER_PORT_ID_DEFAULT;
-        label_.dest_.peerID_ = 0;
-        label_.dest_.interfaceID_ = 0;
+        reset();
     }
 
-    Label(LabelStruct connDesc)
-    {
-        label_ = connDesc;
-    }
 
-    // inline EndpointDescriptionStruct & GetDescription(LabelEndpoint endpoint){return GetEndpoint(endpoint);}
-    inline LabelStruct & GetLabel(){return label_;}
-    inline void SetDescription(LabelStruct & labelStruct){label_ = labelStruct;}
-    inline void SetDescription(EndpointDescriptionStruct & endDesc, LabelEndpoint endpoint){GetEndpoint(endpoint) = endDesc;}
+    inline MessageID GetMessageID(){return contents_.messageID_;}
+    inline InterfaceType GetInterfaceType(){return contents_.type_;}
+    inline InterfaceDescription & GetSrc(){return contents_.src_;}
+    inline InterfaceDescription & GetDest(){return contents_.dest_;}
+    inline Contents & GetContents(){return contents_;}
+
+    // inline InterfaceDescription & GetDescription(LabelEndpoint endpoint){return GetEndpoint(endpoint);}
+    inline void SetDescription(InterfaceDescription & endDesc, LabelEndpoint endpoint){GetEndpoint(endpoint) = endDesc;}
     inline InterfaceID GetInterfaceID(LabelEndpoint endpoint){return GetEndpoint(endpoint).interfaceID_;}
     inline PortID GetPortID(LabelEndpoint endpoint){return GetEndpoint(endpoint).portID_;}
     inline PeerID GetPeerID(LabelEndpoint endpoint){return GetEndpoint(endpoint).peerID_;}
@@ -77,22 +121,33 @@ public:
 
     inline void Swap()
     {
-        auto temp = label_.dest_;
-        label_.dest_ = label_.self_;
-        label_.self_ = temp;
+        auto temp = contents_.dest_;
+        contents_.dest_ = contents_.src_;
+        contents_.src_ = temp;
     }
-
+protected:
+    void reset()
+    {
+        contents_.src_.portID_ = PEER_PORT_ID_DEFAULT;
+        contents_.src_.peerID_ = 0;
+        contents_.src_.interfaceID_ = 0;
+        contents_.dest_.portID_ = PEER_PORT_ID_DEFAULT;
+        contents_.dest_.peerID_ = 0;
+        contents_.dest_.interfaceID_ = 0;
+    }
 private:
-    EndpointDescriptionStruct & GetEndpoint(LabelEndpoint endpoint)
+
+
+    InterfaceDescription & GetEndpoint(LabelEndpoint endpoint)
     {
         switch(endpoint)
         {
             case LabelEndpoint::Self:
-                return label_.self_;
+                return contents_.src_;
                 break;
                 
             case LabelEndpoint::Dest:
-                return label_.dest_;
+                return contents_.dest_;
                 break;
                 
             default:
@@ -103,7 +158,8 @@ private:
         throw; //TODO
     }
 
-    LabelStruct label_;
+    Contents contents_;
+
 };
 
 
