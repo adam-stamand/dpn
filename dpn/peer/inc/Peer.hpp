@@ -9,6 +9,7 @@
 namespace dpn
 {
 
+#define TEMP_MACRO 0
 
 class Interface;
 class TopicInterface;
@@ -22,13 +23,11 @@ public:
     using InterfaceID = Label::InterfaceID;
     using PortID = Label::PortID;
     using MessageID = Label::MessageID;
-    using ConnectionDescriptionStruct = Label::InterfacePair;
     using Endpoint = Label::LabelEndpoint;
     using Package = std::vector<Message*>;
 
-    explicit Peer(PeerID peerID); 
-    virtual ~Peer();
-
+    explicit Peer(PeerID peerID, Message::MessageSize recvMessageSize = 0x2000); 
+    
     friend TopicInterface;
 
 
@@ -57,6 +56,11 @@ public:
         Package & sendMessage, 
         Package & recvMessage,
         Hub::HubTimeout timeout = Hub::HubTimeout(0));
+    void Request(
+        Label & label,
+        Package && sendMessage, 
+        Package && recvMessage,
+        Hub::HubTimeout timeout = Hub::HubTimeout(0));
 
 
     /**
@@ -74,6 +78,7 @@ public:
      * @param package Package to be published
      */
     void Publish(Label & label, Package & package);
+    void Publish(Label & label, Package && package);
 
     /**
      * @brief Push/Pull - Push
@@ -88,10 +93,11 @@ public:
      * @param message Message to be pushed
      */
     void Push(Label & label, Package & package);
+    void Push(Label & label, Package && package);
  
 
     /**
-     * @brief Interface - Handle pending messages for interfaces
+     * @brief Service Interfaces - Handle pending messages for interfaces
      * 
      * @details Checks for any pending/queued messages waiting to be read. If a message is found, the contents
      * will be copied into the contents of the user supplied message. This message will then be forwarded to the
@@ -99,11 +105,9 @@ public:
      * 
      * This call will block until either an interface is serviced, or until the timeout expires, whichever comes first.
      * 
-     * @param connDesc Conenction Description; Set by function to value in received message header 
-     * @param message Message used for servicing interface. Contents will be overwitten by function
      * @param timeout Milliseconds to wait for pending message
      */
-    void ServiceInterfaces(Label & label, Package & package, const Hub::HubTimeout timeout);
+    void ServiceInterfaces(const Hub::HubTimeout timeout);
 
     /**
      * @brief Get Pending Message
@@ -122,20 +126,24 @@ public:
         Label & label, 
         Package & package, 
         const Hub::HubTimeout & timeout);
+    void GetPendingPackage(
+        Label & label, 
+        Package && package, 
+        const Hub::HubTimeout & timeout);
 
 
     // Port Managment
     void AddPort(
-        Label & label,
         Port::Transport transport,  
         Port::PortContext &context, 
-        zmq::event_flags flags); 
-    void RemovePort(PortID portID = Label::PEER_PORT_ID_DEFAULT_VALUE);
-    void ClosePort(PortID portID = Label::PEER_PORT_ID_DEFAULT_VALUE);
-    void Connect(PeerID peerID, PortID portID = Label::PEER_PORT_ID_DEFAULT_VALUE);
-    void Disconnect(PeerID peerID, PortID portID = Label::PEER_PORT_ID_DEFAULT_VALUE);
-    
+        zmq::event_flags flags, 
+        PortID localPortID = Label::PEER_PORT_ID_DEFAULT);
+    void RemovePort(PortID localPortID = Label::PEER_PORT_ID_DEFAULT);
+    void ClosePort(PortID localPortID = Label::PEER_PORT_ID_DEFAULT);
+    void Connect(PeerID peerID, PortID portID = Label::PEER_PORT_ID_DEFAULT, PortID localPortID = Label::PEER_PORT_ID_DEFAULT);
+    void Disconnect(PeerID peerID, PortID portID = Label::PEER_PORT_ID_DEFAULT, PortID localPortID = Label::PEER_PORT_ID_DEFAULT);
 protected:
+    virtual ~Peer();
     
     PeerID GetPeerID();
     dpn::Logger & GetLogger(){return logger_;}
@@ -155,18 +163,19 @@ private:
     bool heartbeatEnabled_;
     dpn::Logger logger_;
     PeerID peerID_;
-    Message headerMessage_;
+    Message labelMessage_;
+    Message recvMessage_;
+    Package recvPackage_;
     uint32_t messageID_;
     void SendHeartbeat();
     std::unordered_map<InterfaceID, Interface*> interface_map_; 
     
     void Subscribe(Label & label);
     void SendMessages(Label & label, Package messages);
-    void ReceiveMessages(Label & label, Package messages);
+    void ReceiveMessages(PortID destPortID, Package package);
 
     void Poll(
-        Label & label,
-        Message * message, 
+        Package & package, 
         zmq::event_flags flags,
         const Hub::HubTimeout & timeout);
 
@@ -181,8 +190,7 @@ private:
     }
 
     void RequestImpl(
-        Label & connDesc, 
-        Message* recvMessage,
+        Package & recvMessage,
         Hub::HubTimeout timeout);
 
 

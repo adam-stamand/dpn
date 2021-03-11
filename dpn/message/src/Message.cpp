@@ -24,7 +24,7 @@ void Message::resize(MessageSize size, MessageSize offset)
     if (size + offset > capacity_)
     {
         DPN_SYS_WARN(
-                "Size exceeds max size of message - size = {}, offset = {}, maxSize = {}", 
+                "Size exceeds capacity of message - size = {}, offset = {}, capacity = {}", 
                 size, offset, capacity_);
         return; 
     }

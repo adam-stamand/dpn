@@ -19,19 +19,15 @@ public:
     TopicInterface(Peer * peer):Interface(peer){}
     virtual ~TopicInterface(){};
 
-    virtual TopicStatus HandleTopic(Peer::InterfaceHeader & header, Message & message) = 0;
+    virtual TopicStatus HandleTopic(Label & label, Peer::Package & package) = 0;
 
 
-    virtual void HandleIncomingMessage(Peer::InterfaceHeader & header, Message & message)
+    virtual void HandleIncomingMessage(Label & label, Peer::Package & package)
     {
-        ConnectionDescription connDesc; 
-        connDesc.SetDescription(header.connDesc_);
-        connDesc.Swap();
-        
-        TopicStatus status = HandleTopic(header, message);
+        TopicStatus status = HandleTopic(label, package);
         if (status == TopicStatus::Pass)
         {
-            peer_->Subscribe(connDesc);
+            peer_->Subscribe(label);
         }
     }
 

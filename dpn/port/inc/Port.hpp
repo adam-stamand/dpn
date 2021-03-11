@@ -17,24 +17,12 @@ public:
     using PortContext = zmq::context_t;
     using SocketID = std::string;
 
-
-    // struct PortData : public zmq::message_t
-    // {
-    //     PortData() = default;
-    //     PortData(size_t data_sz):zmq::message_t(data_sz){}
-    //     PortData(const void * data, size_t data_sz):zmq::message_t(data, data_sz){}
-    //     PortData(const std::string& data):zmq::message_t(data){};
-    //     PortData(const char* data):zmq::message_t(data){};
-    // };
-
     enum class Transport
     {
         inproc,
         ipc,
         tcp
     };
-
-
     
     Port(PortName portName, Transport transport,  zmq::context_t &context);
     ~Port();
@@ -50,8 +38,6 @@ public:
     void Receive(Port::PortName &portName, Message* message, zmq::recv_flags flags = zmq::recv_flags::none);
     void Receive(Port::PortName &portName, std::vector<Message*>& messages, zmq::recv_flags flags = zmq::recv_flags::none);
  
-
-
     PortName GetPortName(){return portName_;}
     Transport GetTransport(){return transport_;}
 

@@ -19,7 +19,7 @@ public:
     Interface(Peer * peer):peer_(peer){}
     virtual ~Interface(){};
     
-    virtual void HandleIncomingMessage(Label::InterfaceHeader & header, Message & message) = 0;
+    virtual void HandleIncomingMessage(Label & label, Peer::Package & package) = 0;
 protected:
     Peer * peer_;
 };

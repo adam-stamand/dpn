@@ -12,15 +12,12 @@ public:
     ReplyInterface(Peer * peer):Interface(peer){}
     virtual ~ReplyInterface(){};
 
-    virtual void HandleReply(Peer::InterfaceHeader & header, Message & message, Message *& pt_returnMessage) = 0;
-    virtual void HandleIncomingMessage(Peer::InterfaceHeader & header, Message & message)
+    virtual void HandleReply(Label & label, Peer::Package & package, Peer::Package& returnPackage) = 0;
+    virtual void HandleIncomingMessage(Label & label, Peer::Package & package)
     {
-        ConnectionDescription connDesc; 
-        connDesc.SetDescription(header.connDesc_);
-        connDesc.Swap();
-        Message * returnMessage;
-        HandleReply(header, message, returnMessage);
-        peer_->Push(connDesc, returnMessage);
+        Peer::Package returnPackage;
+        HandleReply(label, package, returnPackage);
+        peer_->Push(label, returnPackage);
     }
 
 };
