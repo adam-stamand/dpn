@@ -1,0 +1,63 @@
+notifications:
+  email:
+    recipients:
+      - adam.stamand@gmail.com
+    on_success: never
+    on_failure: change
+
+language: cpp
+
+sudo: required
+
+env:
+  global:
+    # The next declaration is the encrypted COVERITY_SCAN_TOKEN, created
+    #   via the "travis encrypt" command using the project repo's public key
+    - secure: "pXJb5PSUQfM/fwLibXLfAgP/qMRtzczjHFc7WL5PjW2ifEpbCZQwkSpA99DdOQy2+1TgAHec4KbaKWxxmLJd4RzV2JBoPaHGU9G1gCAZFh8BYwI3kSavajCWH88NORQumHFlJ0Ldu2wyxYawSrl7ewoqinltLh5TPIT5KsgbWxvHVeGaVXPBtASVWA8ZSF8Ad0vm5jUjljlwZMu/d7Y41KYxAawaA6GjCK2bKesooSUKGUHv8G/TfAWrtvO7MZn7YEUkC6Df5LwcTV61CZnbXKHxGpe0o5BR4xL9NekIsZXKEdaF2T89SRQ0o62+znYcuHYFX3bfXAxvNXv5LEe7/w6BmxdwwttdvpPv+7jxBbqlEpyXlj3NON/6jLMPjkLiqCN3gfB7LOfem4PSx/oRgeSzLnX1exb6tThjxu+vuRHYADiXgbMI7i8uD6ZL0Fs3qm05WNhLN7UmpQfRLBpQ21kn8zRmXraTfLsTo8utTW1XtTNmN3S2GK1ogDQUkOAi9aA1AwPtW7cRzeXEDyNRlwf4DqZnr+kkXzJLy9S0KmfkdImGI0egP9kCBa3THMLELQuEosqdi2eStJTbil9d4/hXcTN8+rpsmHIzV5tr/nBVjLfnTOkv2Ml2hzwHYOKNryC8DBXLnmKNAz+Uuw61lgweW/2DgzCRyGwimvvTwM4="
+
+install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y libgtest-dev valgrind
+  - pip install --user cpp-coveralls
+  - pip install --user meson
+  - echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
+
+before_script:
+  # Check versions of gcc, g++ and cmake
+  - ${COMPILER} -v 
+  # Run your build commands next
+  - make config.linux CXX=${COMPILER}
+  - make build.linux
+  
+script:
+  - make test.linux
+
+matrix:
+    - os: linux
+      dist: bionic
+      compiler: gcc
+      env:
+        - COMPILER=g++-7
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: [g++-7, valgrind]
+    - os: linux
+      dist: bionic
+      compiler: gcc
+      env:
+        - COMPILER=g++-9
+      after_success:
+        - cd ..
+        - coveralls --include "dpn/"  --gcov-options '\-lp' --root . --verbose
+      addons:
+        apt:
+          sources: ['ubuntu-toolchain-r-test']
+          packages: [g++-9, valgrind]
+        coverity_scan:
+          project:
+            name: "adam-stamand/dpn"
+          notification_email: adam.stamand@gmail.com
+          build_command_prepend: ""
+          build_command: "cmake --build ."
+          branch_pattern: master
