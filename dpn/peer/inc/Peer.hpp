@@ -14,7 +14,14 @@ namespace dpn
 class Interface;
 class SubscriptionInterface;
 
-
+/**
+ * @brief Peer Class
+ * 
+ * @details The Peer class defines the basic unit of the peer network. 
+ * A peer has a private instance of a Hub which it uses to interact with
+ * other peers. 
+ * 
+ */
 class Peer
 {
 public:

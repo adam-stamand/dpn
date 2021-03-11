@@ -1,0 +1,4 @@
+# Sphinx build folder
+build/
+html/
+xml/
