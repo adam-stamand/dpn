@@ -36,10 +36,6 @@ void Hub::ClosePort(const PortID & localPortID)
 
 void Hub::PollCallback(const PortID & localPortID, zmq::event_flags flags)
 {
-    // DPN_SYS_WARN(
-    //     "Hub::{}:{} callback called without implementation: flags = {}", 
-    //     hubName_, localPortID, flags);
-
     pollPortID_ = localPortID;
     pollEventFlags_ = flags;
 };

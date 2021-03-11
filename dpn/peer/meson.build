@@ -13,6 +13,7 @@ peer_lib = static_library(
     include_directories: [inc], 
     dependencies: [
         hub_dep,
+        label_dep,
         port_dep,
         util_dep,  
         interface_dep],
@@ -24,6 +25,7 @@ peer_dep = declare_dependency(
     link_with: peer_lib, 
     dependencies: [
         hub_dep,
+        label_dep,
         port_dep,
         util_dep,  
         interface_dep])

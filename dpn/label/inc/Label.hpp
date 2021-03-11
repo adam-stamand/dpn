@@ -11,6 +11,7 @@ namespace dpn
 {
 
 
+#define PEER_PORT_ID_DEFAULT_VALUE 0
 class Label
 {
 
@@ -21,7 +22,6 @@ public:
     using InterfaceID = uint16_t;
     using MessageID = uint32_t;
 
-    #define PEER_PORT_ID_DEFAULT_VALUE 0
 
     const static uint16_t PEER_PORT_ID_DEFAULT;
 
@@ -73,11 +73,13 @@ public:
 
 
     /**
-     * @brief Interface Header
+     * @brief Contents
      * 
      * @details 
      * 
      */
+    // TODO Proper serailization needs to take place to ensure this struct
+    // is able to written/read from a buffer
     struct Contents
     {
         MessageID messageID_;
@@ -89,14 +91,17 @@ public:
 
     enum class LabelEndpoint : uint32_t
     {
-        Self,
+        Src,
         Dest
     };
 
 
-    const static uint16_t PEER_PORT_ID_DEFAULT;
-
     Label()
+    {
+        reset();
+    }
+
+    Label(Contents& content):contents_(content)
     {
         reset();
     }
@@ -107,8 +112,8 @@ public:
     inline InterfaceDescription & GetSrc(){return contents_.src_;}
     inline InterfaceDescription & GetDest(){return contents_.dest_;}
     inline Contents & GetContents(){return contents_;}
+    
 
-    // inline InterfaceDescription & GetDescription(LabelEndpoint endpoint){return GetEndpoint(endpoint);}
     inline void SetDescription(InterfaceDescription & endDesc, LabelEndpoint endpoint){GetEndpoint(endpoint) = endDesc;}
     inline InterfaceID GetInterfaceID(LabelEndpoint endpoint){return GetEndpoint(endpoint).interfaceID_;}
     inline PortID GetPortID(LabelEndpoint endpoint){return GetEndpoint(endpoint).portID_;}
@@ -116,8 +121,6 @@ public:
     inline void SetPortID(PortID portID, LabelEndpoint endpoint){GetEndpoint(endpoint).portID_ = portID;}
     inline void SetPeerID(PeerID peerID, LabelEndpoint endpoint){GetEndpoint(endpoint).peerID_ = peerID;}
     inline void SetInterfaceID(InterfaceID interfaceID, LabelEndpoint endpoint){GetEndpoint(endpoint).interfaceID_ = interfaceID;}
-
-    // inline void 
 
     inline void Swap()
     {
@@ -142,7 +145,7 @@ private:
     {
         switch(endpoint)
         {
-            case LabelEndpoint::Self:
+            case LabelEndpoint::Src:
                 return contents_.src_;
                 break;
                 

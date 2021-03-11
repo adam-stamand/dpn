@@ -10,7 +10,7 @@
 ## Table of Contents
 
 * [About the Project](#about-the-project)
-  * [Built With](#built-with)
+  * [Dependencies](#dependencies)
 * [Getting Started](#getting-started)
   * [Prerequisites](#prerequisites)
   * [Building/Running](#building/running)
@@ -31,7 +31,8 @@
 
 The Distributed Peer Network (DPN) is a Message-Oriented Middleware [MOM](https://en.wikipedia.org/wiki/Message-oriented_middleware) built on top of [ZMQ](https://zeromq.org/).
 
-In short, DPN enables users to get aligned message buffers from one peer to another with a flexible, extensible and easy-to-use API. The peers may be different threads within a process, different processes within a processor, or 
+In short, DPN enables users to get aligned message buffers from one peer to another with a flexible, 
+extensible and easy-to-use API. The peers may be different threads within a process, different processes within a processor, or 
 even different processors within a distributed system.
 
 The message buffers can be exchanged utilizing any of the following patterns:
@@ -42,7 +43,7 @@ The message buffers can be exchanged utilizing any of the following patterns:
 
 
 
-### Built With
+### Dependencies
 Below are frameworks/tools that DPN is built using:
 * [libzmq](https://github.com/zeromq/libzmq)
 * [cppzmq](https://github.com/zeromq/cppzmq)
@@ -88,41 +89,36 @@ Ports are the fundamental entity used for exchanging messages. Each port has a P
 
 ### Hub
 
-Hubs just contain a number of ports. They provide an interface to manage/access multiple ports.
+Hubs contain a number of ports. They provide an interface to manage/access multiple ports.
 
 ### Peer
 
 A peer is the main object of DPN. Each peer contains a Hub, which gives the peer access to any of the hub's ports. 
 
 Peers communicate to each other through an Interface mechanism. Each peer is capable of calling another peer's interfaces. Each peer is also capable of defining their own interfaces.
-Calls and Interfaces each have types. These types map one-to-one in the following way:
-* Push Calls -> Pull Interfaces
+Calls and Interfaces each have types. These types map in the following way:
+* Push Calls -> Pull/Subscription Interfaces
 * Request Calls -> Reply Interfaces
-* Pubish Calls -> Subscription Interfaces
-* Subscribe Calls -> Topic Interfaces
+* Pubish Calls -> Pull Interfaces
 
-For example, let's say Peer 0 wants to subscribe to a topic on Peer 1. The following would acheive this effect:
-1. Peer 1 implements a Topic Interface
-2. Peer 0 implements a Subscription Interface
-3. Peer 0 makes a Subscribe Call to Peer 1 Topic Interface
-4. Peer 1 makes a Publish Call (using the topic ID from its Topic Interface)
-5. Peer 0 receives a message on its Subscription Interface
+For example, let's say Peer 0 wants to subscribe to a topic on Peer 1's subscription interface (let's call it SubInterface_0). Peer 0 wants published messages to be received on its Pull Interface (let's call it PullInterace_0). The following would acheive this effect:
+1. Peer 1 implements a Subscription Interface (SubInterface_0)
+2. Peer 0 makes a Push Call to the Peer 1 Subscription Interface (specifying PullInterace_0 interface ID)
+3. Peer 1 makes a Publish Call (using the interface ID of the Subscription Interface SubInterface_0)
+4. Peer 0 receives a message on its Pull Interface (PullInterface_0)
 
 
 ### Interfaces
 
-An interface is callable by a remote peer. There are four types of interfaces (though users can create their own as well):
+An interface is functionality that a peer exposes for other peers to use. There are three types of interfaces (though users can create their own as well):
 * Subscription
 * Pull
 * Reply
-* Topic
-
 
 
 ### Messages
 
-Messages provide an aligned buffer (statically allocated at runtime). This allows users to cast the buffer as arbitrary types. The resize() method should be used to set the size of the message after
-data is written to the buffer.
+Messages provide an abstraction to memory used for sending and receiving data. Messages are implemented with an aligned buffer (statically allocated at runtime). Messages maintain a size, capacity, and offset. The size describes how much of the message buffer is being used, the capacity is how much total space is available in the message buffer, and the offset is used as an offset into the message buffer for access to the buffer via the .buffer() method. The resize() method should be used to set the size of the message after data is written to the buffer.
 
 Messages are managed by the user. Along with an offset option, this allows users to easily achieve zero-copy messaging.
 

@@ -12,10 +12,10 @@ public:
     PullInterface(Peer * peer):Interface(peer){}
     virtual ~PullInterface(){};
 
-    virtual void HandlePull(Peer::InterfaceHeader & header, Message & message) = 0;
-    virtual void HandleIncomingMessage(Peer::InterfaceHeader & header, Message & message)
+    virtual void HandlePull(Label & label, Peer::Package & package) = 0;
+    virtual void HandleIncomingMessage(Label & label, Peer::Package & package)
     {    
-        HandlePull(header, message);
+        HandlePull(label, package);
     }
 
 

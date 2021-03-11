@@ -20,8 +20,16 @@ public:
         
 
     Hub(const HubName & hubName);
-    virtual ~Hub();
+    ~Hub();
 
+    /**
+     * @brief Port Specification
+     * 
+     * This class is used to identify a particular port on a hub.
+     * PortSpecifcations are used to interface with Hubs for operations 
+     * such as Connecting, Sending, etc. The PortSpecification specifies
+     * the remote hub/port to interact with.
+     */
     class PortSpecification
     {
     public:
@@ -43,7 +51,21 @@ public:
         }
     };
 
-
+    /**
+     * @brief Poll Callback
+     * 
+     * This function is registered as a handler for each port's poller. When
+     * a port is being polled, if an event occurs before timing out 
+     * PollCallback will be called as the handler. 
+     * 
+     * PollCallback just captures the portID of the port in which the event
+     * occurred, and the flags which can be used to determined the type of event.
+     * The captured values are saved to member variables, which can be used at a 
+     * later time (typically right after polling)
+     * 
+     * @param localPortID 
+     * @param flags 
+     */
     void PollCallback(const PortID & localPortID, zmq::event_flags flags);
 
     void AddPort(
@@ -66,7 +88,8 @@ public:
 
     void Poll(Hub::PortID & localPortID, zmq::event_flags & flags, std::chrono::milliseconds timeout);
     HubName & GetHubName(){return hubName_;}
-    
+
+
 private:
     HubName hubName_;
     zmq::active_poller_t poller_;

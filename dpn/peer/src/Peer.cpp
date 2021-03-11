@@ -6,15 +6,16 @@ namespace dpn
 
 const uint16_t Label::PEER_PORT_ID_DEFAULT = PEER_PORT_ID_DEFAULT_VALUE;
 
-Peer::Peer(PeerID peerID): 
+Peer::Peer(PeerID peerID, Message::MessageSize recvMessageSize): 
 hub_(std::to_string(peerID)),
-heartbeatEnabled_(true),logger_(std::to_string(peerID)),peerID_(peerID),headerMessage_(sizeof(Label::Contents)),messageID_(0)
+heartbeatEnabled_(true),logger_(std::to_string(peerID)),peerID_(peerID),labelMessage_(sizeof(Label::Contents)),recvMessage_(recvMessageSize),messageID_(0)
 {
     DPN_LOGGER_DEBUG(
         GetLogger(), 
         "Peer::{} created", 
         GetPeerID());
-    headerMessage_.resize(sizeof(Label::Contents));
+    labelMessage_.resize(sizeof(Label::Contents));
+    recvPackage_.push_back(&recvMessage_);
 }
 
 
@@ -30,11 +31,10 @@ Peer::~Peer()
 
 void Peer::Subscribe(Label & label)
 {
-    auto subVec = pub_map_.find(label.GetInterfaceID(Endpoint::Self));
+    auto subVec = pub_map_.find(label.GetInterfaceID(Endpoint::Src));
     if (subVec == pub_map_.end())
     {
-        std::vector<Label> newVec{label};
-        pub_map_.insert(std::pair<InterfaceID, std::vector<Label>>(label.GetInterfaceID(Endpoint::Self), newVec));
+        pub_map_.insert({label.GetInterfaceID(Endpoint::Src), {label}});
     }
     else
     {
@@ -44,21 +44,25 @@ void Peer::Subscribe(Label & label)
 
 void Peer::Publish(Label & label, Package & package)
 {
-    auto subVec = pub_map_.find(label.GetInterfaceID(Endpoint::Self));
+    auto subVec = pub_map_.find(label.GetInterfaceID(Endpoint::Src));
     if (subVec == pub_map_.end())
     {
         DPN_LOGGER_WARN(
             GetLogger(), 
             "Peer::{}/Port::{} unable to locate topic {} for publishing", 
-            GetPeerID(), label.GetPortID(Endpoint::Self), label.GetInterfaceID(Endpoint::Self));
+            GetPeerID(), label.GetPortID(Endpoint::Src), label.GetInterfaceID(Endpoint::Src));
         return;
     }
 
     for (auto & receipt : subVec->second)
     {
-        // connDesc.GetEndpoint(Endpoint::Dest) = receipt;
         Push(receipt, package);
     }
+}
+
+void Peer::Publish(Label & label, Package && package)
+{
+    Publish(label, package);
 }
 
 
@@ -66,26 +70,41 @@ void Peer::Push(Label & label, Package & package)
 {
     SendMessages(label, package);
 }
+void Peer::Push(Label & label, Package && package)
+{
+    Push(label, package);
+}
 
 
-void Peer::GetPendingMessage(
+void Peer::GetPendingPackage(
     Label & label, 
     Package & package, 
     const Hub::HubTimeout & timeout)
 {
     try
     {
-        Poll(label, package, zmq::event_flags::pollin, timeout);
+        Poll(package, zmq::event_flags::pollin, timeout);
     }
     catch(...)
     {
         throw;
     }
+    
+    //TODO potential unaligned memory access
+    auto labelContents = static_cast<Label::Contents*>(labelMessage_.buffer());
+    label.GetContents() = *labelContents; 
+}
+
+void Peer::GetPendingPackage(
+    Label & label, 
+    Package && package, 
+    const Hub::HubTimeout & timeout)
+{
+    GetPendingPackage(label, package, timeout);
 }
 
 
 void Peer::RequestImpl(
-        Label & label, 
         Package & package,
         Hub::HubTimeout timeout)
 {
@@ -101,14 +120,14 @@ void Peer::RequestImpl(
     {
         try
         {
-            Poll(label, package, zmq::event_flags::pollin, currTimeout);
+            Poll(package, zmq::event_flags::pollin, currTimeout);
         }
         catch(...)
         {
             return; //TODO
         }
 
-        auto header = static_cast<Label::Contents*>(headerMessage_.buffer());
+        auto header = static_cast<Label::Contents*>(labelMessage_.buffer());
         if (header->messageID_  == messageID_)
         {
             // Found correct message
@@ -139,15 +158,27 @@ void Peer::Request(
         Hub::HubTimeout timeout) 
 {
     Push(label, sendPackage);
-    RequestImpl(label, recvPackage, timeout);
+    RequestImpl(recvPackage, timeout);
+}
+
+void Peer::Request(
+        Label & label, 
+        Package && sendPackage, 
+        Package && recvPackage,
+        Hub::HubTimeout timeout) 
+{
+    Request(
+        label,
+        sendPackage,
+        recvPackage,
+        timeout);
 }
 
 
 void Peer::Poll(
-    Label & label, 
     Package & package, 
     zmq::event_flags flags,
-    const Hub::HubTimeout & timeout) 
+    const Hub::HubTimeout & timeout)
 {
     PortID localPortID;
     Hub::PortSpecification spec;
@@ -164,8 +195,7 @@ void Peer::Poll(
 
     if (PollEventPresent(polledFlags,zmq::event_flags::pollin))
     {
-        label.SetPortID(localPortID, Endpoint::Dest);
-        ReceiveMessages(label, package);
+        ReceiveMessages(localPortID, package);
     }
     else
     {
@@ -179,63 +209,71 @@ void Peer::Poll(
 }
 
 
-void Peer::SendMessages(Label & label, Package package)
+void Peer::SendMessages(Label & label, Package & package)
 {
     Hub::PortSpecification spec;
-    auto header = static_cast<Label::Contents*>(headerMessage_.buffer());
-    label.SetPeerID(GetPeerID(), Endpoint::Self);
-    header->connDesc_ = label.GetDescription();
-    
+    // TODO may result in unaligned access
+    auto labelContent = static_cast<Label::Contents*>(labelMessage_.buffer());
+    label.SetPeerID(GetPeerID(), Endpoint::Src);
+    *labelContent = label.GetContents();
+
     spec.hubName_ = PeerIDtoHubName(label.GetPeerID(Endpoint::Dest));
     spec.portID_ = label.GetPortID(Endpoint::Dest);
     
     messageID_++;
-    header->messageID_ = messageID_;
+    labelContent->messageID_ = messageID_;
 
-    package.insert(package.begin(), &headerMessage_);
-    hub_.Send(label.GetPortID(Endpoint::Self), spec, package);
+    // TODO implement package class that separates package from label
+    Package tempPackage;
+    tempPackage.push_back(&labelMessage_);
+    tempPackage.insert(tempPackage.end(), package.begin(), package.end());
+    auto temp = label.GetPortID(Endpoint::Src);
+    hub_.Send(temp , spec, tempPackage);
 }
 
 
-void Peer::ReceiveMessages(Label & label, Package package)
+void Peer::ReceiveMessages(PortID destPortID, Package & package)
 {
     Hub::PortSpecification spec;
-    package.insert(package.begin(), &headerMessage_);
-    hub_.Receive(label.GetPortID(Endpoint::Dest), spec, package);
     
-    auto header = static_cast<Label::Contents*>(headerMessage_.buffer());
-    label.GetContents() = *header;
+    // TODO implement package class that separates package from label
+    Package tempPackage;
+    tempPackage.push_back(&labelMessage_);
+    tempPackage.insert(tempPackage.end(), package.begin(), package.end());
+    hub_.Receive(destPortID, spec, tempPackage);
+    // TODO may result in unaligned access
+    auto labelContents = static_cast<Label::Contents*>(labelMessage_.buffer());
 
-    if (header->src_.portID_ != spec.portID_)
+    if (labelContents->src_.portID_ != spec.portID_)
     {
         DPN_LOGGER_WARN(
             GetLogger(), 
-            "Peer::{}/Port::{} received bad port ID in header {}", 
-            GetPeerID(), connDesc.GetPortID(Endpoint::Dest), header->src_.portID_);
+            "Peer::{}/Port::{} received bad port ID {} in label contents", 
+            GetPeerID(), labelContents->dest_.portID_, labelContents->src_.portID_);
     }
-    else if (header->src_.peerID_ != HubNametoPeerID(spec.hubName_))
+    else if (labelContents->src_.peerID_ != HubNametoPeerID(spec.hubName_))
     {
         DPN_LOGGER_WARN(
             GetLogger(), 
             "Peer::{}/Port::{} received bad peer ID in header {}", 
-            GetPeerID(), connDesc.GetPortID(Endpoint::Dest), header->src_.peerID_);
+            GetPeerID(), labelContents->dest_.portID_, labelContents->src_.peerID_);
     }
 }
 
 
 
-void Peer::ServiceInterfaces(Label & label, Package package, const Hub::HubTimeout timeout)
+void Peer::ServiceInterfaces(const Hub::HubTimeout timeout)
 {
+    Label label;
     // TODO check return value/exception
     try
     {
-        GetPendingMessage(label, package, timeout);
+        GetPendingPackage(label, recvPackage_, timeout);
     }
     catch(...)
     {
         return;
     }
-    auto header = static_cast<Label::Contents*>(headerMessage_.buffer());
 
     auto interfacePair = interface_map_.find(label.GetInterfaceID(Endpoint::Dest));
     if (interfacePair == interface_map_.end())
@@ -243,23 +281,23 @@ void Peer::ServiceInterfaces(Label & label, Package package, const Hub::HubTimeo
         DPN_LOGGER_WARN(
             GetLogger(), 
             "Peer::{} failed to locate interface {}", 
-            GetPeerID(), connDesc.GetInterfaceID(Endpoint::Dest));
+            GetPeerID(), label.GetInterfaceID(Endpoint::Dest));
         return;
     }
 
     DPN_LOGGER_DEBUG(
         GetLogger(), 
         "Peer::{} interface {} called", 
-        GetPeerID(), connDesc.GetInterfaceID(Endpoint::Dest));
+        GetPeerID(), label.GetInterfaceID(Endpoint::Dest));
     auto interface = interfacePair->second;
-    interface->HandleIncomingMessage(*header, package);
+    interface->HandleIncomingMessage(label, recvPackage_);
 }
 
 void Peer::AddPort(
-    PortID localPortID,
     Port::Transport transport,  
     Port::PortContext &context, 
-    zmq::event_flags flags)
+    zmq::event_flags flags,
+    PortID localPortID)
 {
     hub_.AddPort(localPortID, transport, context, flags);
 }
@@ -291,7 +329,7 @@ void Peer::Disconnect(PeerID peerID, PortID portID, PortID localPortID)
 
 void Peer::SendHeartbeat()
 {
-    // std::cout << "Heartbeat sent" << std::endl;
+    std::cout << "Heartbeat sent" << std::endl;
 }
 
 bool Peer::PollEventPresent(zmq::event_flags flags, zmq::event_flags event)
