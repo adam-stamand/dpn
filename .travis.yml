@@ -17,9 +17,11 @@ env:
 
 install:
   - sudo apt-get -qq update
-  - sudo apt-get install -y libgtest-dev valgrind
-  - pip install --user cpp-coveralls
-  - pip install --user meson
+  - sudo apt-get install -y libgtest-dev valgrind ninja-build
+  - sudo apt-get install -y python3-dev python3-pip python3-setuptools
+  - pip3 install -U pip 
+  - python3 -m pip install --user cpp-coveralls
+  - python3 -m pip install --user meson
   - echo -n | openssl s_client -connect https://scan.coverity.com:443 | sed -ne '/-BEGIN CERTIFICATE-/,/-END CERTIFICATE-/p' | sudo tee -a /etc/ssl/certs/ca-
 
 before_script:
@@ -27,10 +29,10 @@ before_script:
   - ${COMPILER} -v 
   # Run your build commands next
   - make config.linux CXX=${COMPILER}
-  - make build.linux
+  - make build.linux CXX=${COMPILER}
   
 script:
-  - make test.linux
+  - make test.linux CXX=${COMPILER}
 
 matrix:
     - os: linux
