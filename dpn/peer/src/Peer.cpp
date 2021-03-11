@@ -209,7 +209,7 @@ void Peer::Poll(
 }
 
 
-void Peer::SendMessages(Label & label, Package package)
+void Peer::SendMessages(Label & label, Package & package)
 {
     Hub::PortSpecification spec;
     // TODO may result in unaligned access
@@ -223,16 +223,24 @@ void Peer::SendMessages(Label & label, Package package)
     messageID_++;
     labelContent->messageID_ = messageID_;
 
-    package.insert(package.begin(), &labelMessage_);
-    hub_.Send(label.GetPortID(Endpoint::Src), spec, package);
+    // TODO implement package class that separates package from label
+    Package tempPackage;
+    tempPackage.push_back(&labelMessage_);
+    tempPackage.insert(tempPackage.end(), package.begin(), package.end());
+    auto temp = label.GetPortID(Endpoint::Src);
+    hub_.Send(temp , spec, tempPackage);
 }
 
 
-void Peer::ReceiveMessages(PortID destPortID, Package package)
+void Peer::ReceiveMessages(PortID destPortID, Package & package)
 {
     Hub::PortSpecification spec;
-    package.insert(package.begin(), &labelMessage_);
-    hub_.Receive(destPortID, spec, package);
+    
+    // TODO implement package class that separates package from label
+    Package tempPackage;
+    tempPackage.push_back(&labelMessage_);
+    tempPackage.insert(tempPackage.end(), package.begin(), package.end());
+    hub_.Receive(destPortID, spec, tempPackage);
     // TODO may result in unaligned access
     auto labelContents = static_cast<Label::Contents*>(labelMessage_.buffer());
 

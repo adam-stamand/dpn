@@ -12,7 +12,8 @@ namespace dpn
 #define TEMP_MACRO 0
 
 class Interface;
-class TopicInterface;
+// class TopicInterface;
+class SubscriptionInterface;
 
 
 class Peer
@@ -28,7 +29,8 @@ public:
 
     explicit Peer(PeerID peerID, Message::MessageSize recvMessageSize = 0x2000); 
     
-    friend TopicInterface;
+    // friend TopicInterface;
+    friend SubscriptionInterface;
 
 
 
@@ -171,8 +173,8 @@ private:
     std::unordered_map<InterfaceID, Interface*> interface_map_; 
     
     void Subscribe(Label & label);
-    void SendMessages(Label & label, Package messages);
-    void ReceiveMessages(PortID destPortID, Package package);
+    void SendMessages(Label & label, Package & messages);
+    void ReceiveMessages(PortID destPortID, Package & package);
 
     void Poll(
         Package & package, 

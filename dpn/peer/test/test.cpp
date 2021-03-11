@@ -17,7 +17,7 @@ namespace TestInterfaceID
 enum TestInterfaceID : Peer::InterfaceID
 {
     Pull,
-    Topic,
+    // Topic,
     Reply,
     Subscription
 };
@@ -47,10 +47,11 @@ class TestSubscriptionInterface : public SubscriptionInterface
 {
 public: 
     TestSubscriptionInterface(Peer * peer, std::string expectedString):SubscriptionInterface(peer),expectedString_(expectedString){}
-    void HandleSubscription(Label & Label, Peer::Package & package)
+    SubscriptionStatus HandleSubscription(Label & Label, Peer::Package & package)
     {
-        ASSERT_STREQ((char*)package[0]->buffer(), expectedString_.c_str());
+        EXPECT_STREQ((char*)package[0]->buffer(), expectedString_.c_str());
         messageHandled = true;
+        return SubscriptionStatus::Pass;
     }
     bool messageHandled = false;
 private:
@@ -63,12 +64,14 @@ class TestReplyInterface : public ReplyInterface
 public:
     TestReplyInterface(Peer* peer):ReplyInterface(peer){}
 
-    void HandleReply(Label & label, Peer::Package & package, Peer::Package & returnPackage)
+    ReplyStatus HandleReply(Label & label, Peer::Package & package, Peer::Package & returnPackage)
     {
-        ASSERT_STREQ((char*)package[0]->buffer(), "REQUEST_INTERFACE");
+        EXPECT_STREQ((char*)package[0]->buffer(), "REQUEST_INTERFACE");
         
-        strncpy((char*)returnPackage[0]->buffer(), "REQUEST_REPLY", returnPackage[0]->capacity());
-        returnPackage[0]->resize(sizeof("REQUEST_REPLY"));
+        strncpy((char*)returnMessage_.buffer(), "REQUEST_REPLY", returnMessage_.capacity());
+        returnMessage_.resize(sizeof("REQUEST_REPLY"));
+        returnPackage.push_back(&returnMessage_);
+        return ReplyStatus::Pass;
     }
 
 
@@ -77,16 +80,16 @@ private:
 };
 
 
-class TestTopicInterface : public TopicInterface
-{
-public:
-    TestTopicInterface(Peer* peer):TopicInterface(peer){}
+// class TestTopicInterface : public TopicInterface
+// {
+// public:
+//     TestTopicInterface(Peer* peer):TopicInterface(peer){}
 
-    TopicStatus HandleTopic(Label & label, Peer::Package & package)
-    {
-        return TopicStatus::Pass;
-    }
-};
+//     TopicStatus HandleTopic(Label & label, Peer::Package & package)
+//     {
+//         return TopicStatus::Pass;
+//     }
+// };
 
 
 
@@ -100,10 +103,10 @@ class TestPeer : public Peer
 {
 public:
     TestPeer(PeerID peerID, std::string expectedString = ""): 
-    Peer(peerID),pullInterface_(this, expectedString),topicInterface_(this), replyInterface_(this), subscriptionInterface_(this,expectedString)
+    Peer(peerID),pullInterface_(this, expectedString), replyInterface_(this), subscriptionInterface_(this,expectedString)
     {
         AddInterface(static_cast<Peer::InterfaceID>(TestInterfaceID::Pull), &pullInterface_);
-        AddInterface(static_cast<Peer::InterfaceID>(TestInterfaceID::Topic), &topicInterface_);
+        // AddInterface(static_cast<Peer::InterfaceID>(TestInterfaceID::Topic), &topicInterface_);
         AddInterface(static_cast<Peer::InterfaceID>(TestInterfaceID::Reply), &replyInterface_);
         AddInterface(static_cast<Peer::InterfaceID>(TestInterfaceID::Subscription), &subscriptionInterface_);
     }
@@ -113,7 +116,7 @@ public:
 
 private:
     TestPullInterface pullInterface_;
-    TestTopicInterface topicInterface_;
+    // TestTopicInterface topicInterface_;
     TestReplyInterface replyInterface_;
     TestSubscriptionInterface subscriptionInterface_;
 };
@@ -247,11 +250,13 @@ TEST(PeerTest, PubSub)
 
     // Create Blank subscription message
     Message message1;
-    message1.resize(0);
+    strncpy((char*)message1.buffer(), "peer1", message1.capacity());
+    message1.resize(sizeof("peer1"));
 
     // Push subscription from peer 0 to peer 1
     label.SetPeerID(Peer::PeerID(1), Peer::Endpoint::Dest);
-    label.SetInterfaceID(TestInterfaceID::Topic, Peer::Endpoint::Dest);
+    label.SetInterfaceID(TestInterfaceID::Subscription, Peer::Endpoint::Dest);
+    label.SetInterfaceID(TestInterfaceID::Pull, Peer::Endpoint::Src);
     peer0.Push(label, {&message1});
 
     // Wait for subscription to arrive on peer 1 and service it
@@ -263,7 +268,7 @@ TEST(PeerTest, PubSub)
     message2.resize(sizeof("peer1"));
     
     // Publish message using peer 1
-    label.SetInterfaceID(TestInterfaceID::Topic, Peer::Endpoint::Src);
+    label.SetInterfaceID(TestInterfaceID::Subscription, Peer::Endpoint::Src);
     peer1.Publish(label, {&message2});
 
     // Pull published message to peer 0
@@ -332,7 +337,7 @@ TEST(PeerTest, Request)
     label.SetPeerID(Peer::PeerID(1), Peer::Endpoint::Dest);
     label.SetInterfaceID(TestInterfaceID::Reply, Peer::Endpoint::Dest);
     peer0.Request(label, {&message1}, {&recvMessage}, Hub::HubTimeout(3000));
-    ASSERT_STREQ((char*)recvMessage.buffer(), "REQUEST_REPLY");
+    EXPECT_STREQ((char*)recvMessage.buffer(), "REQUEST_REPLY");
 
     // Close peer 1 thread
     peer1RunThread = false;
