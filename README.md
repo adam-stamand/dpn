@@ -1,4 +1,5 @@
 [![Build Status](https://www.travis-ci.com/adam-stamand/dpn.svg?branch=main)](https://www.travis-ci.com/adam-stamand/dpn)
+[![Documentation Status](https://readthedocs.org/projects/dpn/badge/?version=latest)](https://dpn.readthedocs.io/en/latest/?badge=latest)
 [![Release](https://img.shields.io/github/v/release/adam-stamand/dpn.svg)](https://github.com/adam-stamand/dpn/releases)
 
 
