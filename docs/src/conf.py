@@ -13,10 +13,6 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('../ext/breathelink/'))
-
-
-
-
 import subprocess
 
 def run_doxygen(folder):
@@ -31,27 +27,13 @@ def run_doxygen(folder):
         sys.stderr.write("doxygen execution failed: %s" % e)
 
 
-def generate_doxygen_xml(app):
-    """Run the doxygen make commands if we're on the ReadTheDocs server"""
-
-    read_the_docs_build = os.environ.get('READTHEDOCS', None) == 'True'
-
-    if read_the_docs_build:
-
-        run_doxygen("../")
-
-
-#def setup(app):
-    
-    # Add hook for building doxygen xml when needed
-    # app.connect("builder-inited", generate_doxygen_xml)
 
 run_doxygen("../")
 
 
 # -- Project information -----------------------------------------------------
 
-project = 'memory-allocators'
+project = 'dpn'
 copyright = '2019, Adam St Amand'
 author = 'Adam St Amand'
 
@@ -72,7 +54,7 @@ breathe_projects = {
 breathe_default_project = "api"
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ['']
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -90,4 +72,4 @@ html_theme = "sphinx_rtd_theme"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
