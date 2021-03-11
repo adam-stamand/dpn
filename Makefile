@@ -11,10 +11,10 @@ config.linux:
 		--werror
 
 build.linux: 
-	meson compile -C build/linux
+	meson compile -C build/linux/${CXX}
 
 test.linux: 
-	meson test -C build/linux --print-errorlogs
+	meson test -C build/linux/${CXX} --print-errorlogs
 
 clean:
 	rm -rf build
