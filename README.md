@@ -1,4 +1,6 @@
 [![Build Status](https://www.travis-ci.com/adam-stamand/dpn.svg?branch=main)](https://www.travis-ci.com/adam-stamand/dpn)
+[![Release](https://img.shields.io/github/v/release/adam-stamand/dpn.svg)](https://github.com/adam-stamand/dpn/releases)
+
 
 <br />
 <p align="center">
