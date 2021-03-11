@@ -1,3 +1,4 @@
+https://www.travis-ci.com/adam-stamand/dpn.svg?branch=main
 
 <br />
 <p align="center">
