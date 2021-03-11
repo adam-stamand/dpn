@@ -1,4 +1,4 @@
-https://www.travis-ci.com/adam-stamand/dpn.svg?branch=main
+[![Build Status](https://www.travis-ci.com/adam-stamand/dpn.svg?branch=main)](https://www.travis-ci.com/adam-stamand/dpn)
 
 <br />
 <p align="center">
