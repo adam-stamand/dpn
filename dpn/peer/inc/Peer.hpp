@@ -12,7 +12,6 @@ namespace dpn
 #define TEMP_MACRO 0
 
 class Interface;
-// class TopicInterface;
 class SubscriptionInterface;
 
 
@@ -29,12 +28,7 @@ public:
 
     explicit Peer(PeerID peerID, Message::MessageSize recvMessageSize = 0x2000); 
     
-    // friend TopicInterface;
     friend SubscriptionInterface;
-
-
-
-
 
 
     /**

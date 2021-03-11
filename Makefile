@@ -1,3 +1,5 @@
+CXX=g++
+
 all: config.linux
 
 
@@ -5,7 +7,7 @@ distclean: clean
 
 
 config.linux:
-	meson setup build/linux      \
+	CXX=${CXX} meson setup build/linux/${CXX}      \
 		--werror
 
 build.linux: 
